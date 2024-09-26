@@ -14,12 +14,12 @@ This is a Node.js web application that utilizes Express, PostgreSQL, and Sequeli
    
 
 2. Install the dependencies:
-
-npm install
+   ```bash
+   npm install
 
 3. Run the application
-
-node app.js
+   ```bash
+   node app.js
 
 
 
