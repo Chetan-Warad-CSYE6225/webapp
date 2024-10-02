@@ -1,8 +1,12 @@
-const express = require("express");
-const { Sequelize } = require("sequelize");
-const dotenv = require("dotenv");
-dotenv.config();
+const express = require('express');
 const app = express();
+const dotenv = require('dotenv');
+const { Sequelize } = require('sequelize');
+
+// Load environment variables from .env file
+dotenv.config();
+
+// Middleware to parse JSON requests
 app.use(express.json());
 
 const setResponseHeaders = (res) => {
@@ -13,73 +17,47 @@ const setResponseHeaders = (res) => {
     });
 };
 
-const disallowMethods = (req, res, next) => {
-    // For request methods that are not allowed
-    if (["PUT", "POST", "DELETE", "PATCH", "HEAD", "OPTIONS"].includes(req.method)) {
-        setResponseHeaders(res);
-        res.status(405).send(); // Method Not Allowed
-        return;
-    }
-    next();
-};
-app.use(disallowMethods);
-
-app.get("/healthz", disallowMethods, async (req, res) => {
+app.all("/healthz", async (req, res) => {
     try {
-        console.log("Received request on /healthz");
-
-        // Check for unexpected query parameters
-        if (Object.keys(req.query).length > 0 || Object.keys(req.body).length > 0 ) {
-            console.warn("Query parameters are not allowed on /healthz");
+        if (req.method !== 'GET') {
+            // return 405 Method Not Allowed for other req method
             setResponseHeaders(res);
-            return res.status(400).send(); // Bad Request
+            return res.status(405).send();
         }
-
-        // Create a new Sequelize instance on every request
-        const sequelize = new Sequelize({
-            database: process.env.DB_DATABASE,
-            username: process.env.DB_USERNAME,
-            password: process.env.DB_PASSWORD,
-            host: process.env.DB_HOST,
-            port: process.env.DB_PORT,
-            dialect: "postgres",
-            logging: console.log // Enable Sequelize logging
-        });
-
-        console.log("Attempting to connect to the PostgreSQL database...");
-
-        // Attempt to authenticate with PostgreSQL
-        await sequelize.authenticate();
-
-        console.log("Database connection successful.");
-
-        // Close the connection after use
-        await sequelize.close();
-        console.log("Database connection closed.");
-
-        // Send 200 OK if connection is successful
+        //If the request has payload
+        if (Object.keys(req.body).length > 0 || Object.keys(req.query).length > 0) {
+            setResponseHeaders(res);
+            res.status(400).send();
+        } else {
+        
+            const sequelize = new Sequelize({
+                database: process.env.DB_DATABASE,
+                username: process.env.DB_USERNAME,
+                password: process.env.DB_PASSWORD,
+                host: process.env.DB_HOST,
+                dialect: "postgres",
+            });
+            await sequelize.authenticate();
+            setResponseHeaders(res);
+            res.status(200).send();
+        }}
+    catch (error) {
+        //IF the database is disconnected
         setResponseHeaders(res);
-        res.status(200).send(); // OK
-    } catch (error) {
-        // Log the error and send 503 if unable to connect
-        console.error("Unable to connect to the database:", error.message);
+        res.status(503).send();
+    }});
 
-        setResponseHeaders(res);
-        res.status(503).send({
-            error: "Service Unavailable. Unable to connect to the database.",
-        });
-    }
-});
+    const userRoutes = require("./routes/userRoutes");
+app.use('/', userRoutes);
 
-const PORT = process.env.SERVER_PORT || 8080;
+const port = process.env.SERVER_PORT || 3000;
 
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });
 
 process.on("SIGINT", () => {
-    console.log("Server terminated.");
+    // clearInterval(interval); 
+    console.log("Server terminated. Interval cleared.");
     process.exit();
 });
-
-
