@@ -1,21 +1,26 @@
-const express = require('express');
-const router = express.Router();
-const userController = require('../controllers/userController');
-const authenticateBasicAuth = require('../middleware/middlewareAuthentication');
+// const express = require('express');
+// const router = express.Router();
+// const userController = require('../controllers/userController');
+// const authenticateBasicAuth = require('../middleware/middlewareAuthentication');
 
+import express from 'express';
+import {createUser,updateUser,getUser} from '../controllers/userController.js';
+import authenticateBasicAuth from '../middleware/middlewareAuthentication.js';
+
+const router = express.Router();
 
 router.head('/v1/user/self', (req, res) => {
     res.status(405).send();
 });
 
 // Create a new user
-router.post('/v1/user', userController.createUser);
+router.post('/v1/user', createUser);
 
 // Update user information
-router.put('/v1/user/self', authenticateBasicAuth, userController.updateUser);
+router.put('/v1/user/self', authenticateBasicAuth, updateUser);
 
 // Get user information
-router.get('/v1/user/self', authenticateBasicAuth, userController.getUser);
+router.get('/v1/user/self', authenticateBasicAuth, getUser);
 
 
 
@@ -32,7 +37,4 @@ router.delete('/v1/user/self', (req, res) => {
     res.status(405).send();
 });
 
-
-
-
-module.exports = router;
+export default router;

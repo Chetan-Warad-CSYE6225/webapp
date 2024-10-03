@@ -1,14 +1,12 @@
-const { Sequelize, DataTypes } = require('sequelize');
-const bcrypt = require('bcrypt');
+// const { Sequelize, DataTypes } = require('sequelize');
+// const bcrypt = require('bcrypt');
+
+import { Sequelize, DataTypes } from 'sequelize';
+import bcrypt from 'bcrypt';
+import sequelize from '../db/sequelize.js';
 
 
-  const sequelize = new Sequelize({
-    database: process.env.DB_DATABASE,
-    username: process.env.DB_USERNAME,
-    password: process.env.DB_PASSWORD,
-    host: process.env.DB_HOST,
-    dialect: "postgres",
-  });
+  
 
   const User = sequelize.define('User', {
     id: {
@@ -63,4 +61,4 @@ const bcrypt = require('bcrypt');
   );
 
   
-  module.exports = {User, sequelize};
+  export { User };

@@ -1,9 +1,19 @@
 {
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "test": "mocha --exit"
+  },
   "dependencies": {
+    "bcrypt": "^5.1.1",
+    "chai": "^5.1.1",
     "dotenv": "^16.4.5",
+    "esm": "^3.2.25",
     "express": "^4.21.0",
+    "mocha": "^10.7.3",
     "pg": "^8.13.0",
     "pg-hstore": "^2.3.4",
-    "sequelize": "^6.37.3"
+    "sequelize": "^6.37.3",
+    "supertest": "^7.0.0"
   }
 }

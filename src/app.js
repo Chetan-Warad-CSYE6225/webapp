@@ -1,7 +1,17 @@
-const express = require('express');
+import express from 'express';
+import dotenv from 'dotenv';
+import { Sequelize } from 'sequelize';
+import userRoutes from './routes/userRoutes.js';
+import sequelize from './db/sequelize.js';
+
+
+
 const app = express();
-const dotenv = require('dotenv');
-const { Sequelize } = require('sequelize');
+
+// const express = require('express');
+// const app = express();
+// const dotenv = require('dotenv');
+// const { Sequelize } = require('sequelize');
 
 // Load environment variables from .env file
 dotenv.config();
@@ -17,6 +27,19 @@ const setResponseHeaders = (res) => {
     });
 };
 
+const connectToDatabase = async () => {
+    try {
+        await sequelize.authenticate();
+        
+        // Sync the database models here if needed
+    } catch (error) {
+        // Handle error appropriately
+    }
+};
+
+// Call the database connection function when the application starts
+connectToDatabase();
+
 app.all("/healthz", async (req, res) => {
     try {
         if (req.method !== 'GET') {
@@ -30,14 +53,6 @@ app.all("/healthz", async (req, res) => {
             res.status(400).send();
         } else {
         
-            const sequelize = new Sequelize({
-                database: process.env.DB_DATABASE,
-                username: process.env.DB_USERNAME,
-                password: process.env.DB_PASSWORD,
-                host: process.env.DB_HOST,
-                dialect: "postgres",
-            });
-            await sequelize.authenticate();
             setResponseHeaders(res);
             res.status(200).send();
         }}
@@ -47,7 +62,7 @@ app.all("/healthz", async (req, res) => {
         res.status(503).send();
     }});
 
-    const userRoutes = require("./routes/userRoutes");
+    //const userRoutes = require("./routes/userRoutes");
 app.use('/', userRoutes);
 
 const port = process.env.SERVER_PORT || 3000;
@@ -61,3 +76,5 @@ process.on("SIGINT", () => {
     console.log("Server terminated. Interval cleared.");
     process.exit();
 });
+
+export default app;

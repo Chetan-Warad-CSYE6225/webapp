@@ -1,7 +1,10 @@
-const bcrypt = require('bcrypt');
-const { User } = require('../models/user');
+// const bcrypt = require('bcrypt');
+// const { User } = require('../models/user');
 
-function authenticateBasicAuth(req, res, next) {
+import bcrypt from 'bcrypt';
+import { User } from '../models/user.js';
+
+async function authenticateBasicAuth(req, res, next) {
   // Get the Authorization header
   const authHeader = req.headers['authorization'];
 
@@ -37,4 +40,4 @@ function authenticateBasicAuth(req, res, next) {
     });
 }
 
-module.exports = authenticateBasicAuth;
+export default authenticateBasicAuth;

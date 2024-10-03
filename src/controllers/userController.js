@@ -1,12 +1,20 @@
-const express = require('express');
-const router = express.Router();
-const {User, sequelize}  = require('../models/user');
-const bcrypt = require('bcrypt');
+// const express = require('express');
+// const router = express.Router();
+// const {User, sequelize}  = require('../models/user');
+// const bcrypt = require('bcrypt');
+
+import { User } from '../models/user.js';
+import bcrypt from 'bcrypt';
+import sequelize from '../db/sequelize.js';
 
 // Create a new user
-exports.createUser = async (req, res) => {
+export const createUser = async (req, res) => {
   try {
     const { email, password, first_name, last_name } = req.body;
+
+    if (!password || password.trim() === "") {
+      return res.status(400).json({ message: "Password cannot be empty" });
+    }
 
     // Check if a user with the same email already exists
     console.log("Email: ", email);
@@ -40,9 +48,12 @@ exports.createUser = async (req, res) => {
 };
 
 // Update user information
-exports.updateUser = async (req, res) => {
+export const updateUser = async (req, res) => {
     try {
       const { first_name, last_name, password } = req.body;
+      if (password === "") {
+        return res.status(400).json({ message: "Password cannot be empty" });
+      }
       const userId = req.user.id; // Assuming you have middleware to populate req.user with user information
       //const userName = req.user.username;
   
@@ -60,10 +71,13 @@ exports.updateUser = async (req, res) => {
           user.first_name = first_name || user.first_name;
           user.last_name = last_name || user.last_name;
   
-          if (password) {
+          
+
+          if(password) {
           const hashedPassword = bcrypt.hashSync(password, bcrypt.genSaltSync(10));
           user.password = hashedPassword;
           }
+
   
          
   
@@ -90,7 +104,7 @@ exports.updateUser = async (req, res) => {
   };
 
 // Get user information
-exports.getUser =  async (req, res) => {
+export const getUser =  async (req, res) => {
     try {
         const userId = req.user.id; // Fetch the user id from findOne function in authenticationMiddleware
   
@@ -110,4 +124,10 @@ exports.getUser =  async (req, res) => {
       console.error(error);
       res.status(400).json({ message: 'ERROR' });
     }
+  };
+
+  export default {
+    createUser,
+    updateUser,
+    getUser
   };
