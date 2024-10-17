@@ -31,9 +31,9 @@ jobs:
  
             - name: Create PostgreSQL user and database
               run: |
-                sudo -u postgres psql -c "CREATE USER $DB_USERNAME WITH PASSWORD '$DB_PASSWORD';" 2>/dev/null
-                sudo -u postgres psql -c "CREATE DATABASE $DB_DATABASE OWNER $DB_USERNAME;" 2>/dev/null
-                sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_DATABASE TO $DB_USERNAME;" 2>/dev/null
+                sudo -u postgres psql -c "CREATE USER chetan WITH PASSWORD Chetan@1234;" 2>/dev/null
+                sudo -u postgres psql -c "CREATE DATABASE cloud OWNER chetan;" 2>/dev/null
+                sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE cloud TO chetan;" 2>/dev/null
                 sudo mkdir -p /var/log/webapp 2>/dev/null
 
             - name: Install Dependencies
