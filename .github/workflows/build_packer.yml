@@ -43,7 +43,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y postgresql postgresql-contrib
-
+    
     # Step 6: Change directory permissions to avoid permission issues
     - name: Change directory permissions
       run: sudo chown -R $USER:$USER /home/runner/work/webapp/webapp
@@ -60,23 +60,24 @@ jobs:
         sudo -u postgres psql -c "CREATE DATABASE \"$DB_DATABASE\";"
         sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE \"$DB_DATABASE\" TO \"$DB_USERNAME\";"
  
-    # Step 8: Set environment variables for the application
+    # Step 8: Set environment variables for the application (create .env file)
     - name: Set environment variables for the application
       run: |
-        echo "DB_HOST=localhost" >> $GITHUB_ENV
-        echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> $GITHUB_ENV
-        echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> $GITHUB_ENV
-        echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> $GITHUB_ENV
-        echo "DB_DIALECT=${{ secrets.DB_DIALECT }}" >> $GITHUB_ENV
-        echo "SERVER_PORT=${{ secrets.SERVER_PORT }}" >> $GITHUB_ENV
-
+        echo "DB_HOST=${{ secrets.DB_HOST }}" >> /tmp/.env
+        echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> /tmp/.env
+        echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> /tmp/.env
+        echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> /tmp/.env
+        echo "DB_DIALECT=${{ secrets.DB_DIALECT }}" >> /tmp/.env
+        echo "SERVER_PORT=${{ secrets.SERVER_PORT }}" >> /tmp/.env
+ 
+    # Step 9: Install Dependencies
     - name: Install Dependencies
       run: npm ci
  
-    # Step 9: Run the tests
+    # Step 10: Run the tests
     - name: Run tests
       env:
-        DB_HOST: localhost
+        DB_HOST: ${{ secrets.DB_HOST }}
         DB_USERNAME: ${{ secrets.DB_USERNAME }}
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         DB_DATABASE: ${{ secrets.DB_DATABASE }}
@@ -84,7 +85,7 @@ jobs:
         SERVER_PORT: ${{ secrets.SERVER_PORT }}
       run: npm test
 
-    # Step 10: Configure AWS Credentials
+    # Step 11: Configure AWS Credentials
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
@@ -92,31 +93,31 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }} 
         aws-region: ${{ secrets.AWS_REGION }}
  
-    # Step 11: Install Packer
+    # Step 12: Install Packer
     - name: Install Packer
       run: |
         curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
         sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
         sudo apt-get update && sudo apt-get install -y packer
  
-    # Step 12: Initialize Packer
+    # Step 13: Initialize Packer
     - name: Initialize Packer
       run: |
         packer init .
             
-    # Step 13: Format Packer
+    # Step 14: Format Packer
     - name: Format Packer
       run: |
         packer fmt .
-
-    # Step 14: Download the artifact (webapp.zip)
+ 
+    # Step 15: Download the artifact (webapp.zip)
     - name: Download webapp artifact
       uses: actions/download-artifact@v3
       with:
         name: webapp
         path: /tmp/artifact/
 
-    # Step 15: Build Custom Image with Packer and include artifact
+    # Step 16: Build Custom Image with Packer and include artifact
     - name: Build Custom Image
       env:
         aws_vpc_id: ${{ secrets.AWS_VPC_ID }}
@@ -128,7 +129,7 @@ jobs:
         aws_profile: ${{ secrets.AWS_PROFILE }}
         aws_source_ami: ${{ secrets.AWS_SOURCE_AMI }}
         volume_size: ${{ secrets.VOLUME_SIZE }}
-        artifact_path: ${{ secrets.ARTIFACT_PATH }}
+        artifact_path: /tmp/artifact/webapp.zip
         aws_ami_name: ${{ secrets.AWS_AMI_NAME }}
         service_name: ${{ secrets.AWS_SERVICE_NAME }}
         aws_region: ${{ secrets.AWS_REGION }}
@@ -147,4 +148,3 @@ jobs:
                      -var "artifact_path=${artifact_path}" \
                      -var "service_name=${service_name}" \
                      .
-                    
