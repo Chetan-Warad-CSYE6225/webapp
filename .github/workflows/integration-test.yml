@@ -9,9 +9,9 @@ jobs:
     api-test:
         runs-on: ubuntu-latest
         env:
-            DB_USERNAME: ${{ secrets.DB_USERNAME }}
-            DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-            DB_DATABASE: ${{ secrets.DB_DATABASE }}
+            DB_USER: ${{ secrets.DB_USERNAME }}
+            DB_PASS: ${{ secrets.DB_PASSWORD }}
+            DB_DB: ${{ secrets.DB_DATABASE }}
         strategy:
             matrix:
                 node-version: [20.x]
@@ -31,9 +31,9 @@ jobs:
  
             - name: Create PostgreSQL user and database
               run: |
-                sudo -u postgres psql -c "CREATE USER $DB_USERNAME WITH PASSWORD '$DB_PASSWORD';" 2>/dev/null
-                sudo -u postgres psql -c "CREATE DATABASE $DB_DATABASE OWNER $DB_USERNAME;" 2>/dev/null
-                sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_DATABASE TO $DB_USERNAME;" 2>/dev/null
+                sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASS';" 2>/dev/null
+                sudo -u postgres psql -c "CREATE DATABASE $DB_DB OWNER $DB_USER;" 2>/dev/null
+                sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_DB TO $DB_USER;" 2>/dev/null
                 sudo mkdir -p /var/log/webapp 2>/dev/null
 
             - name: Install Dependencies
