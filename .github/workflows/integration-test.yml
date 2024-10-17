@@ -31,9 +31,9 @@ jobs:
  
             - name: Create PostgreSQL user and database
               run: |
-                sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASS';" 2>/dev/null
-                sudo -u postgres psql -c "CREATE DATABASE $DB_DB OWNER $DB_USER;" 2>/dev/null
-                sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_DB TO $DB_USER;" 2>/dev/null
+                sudo -u postgres psql -c "CREATE USER chetan WITH PASSWORD 'Chetan@1234';" 2>/dev/null
+                sudo -u postgres psql -c "CREATE DATABASE cloud OWNER chetan;" 2>/dev/null
+                sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE cloud TO chetan;" 2>/dev/null
                 sudo mkdir -p /var/log/webapp 2>/dev/null
 
             - name: Install Dependencies
@@ -42,10 +42,10 @@ jobs:
             - name: API testing
               run: npm test
               env:
-                  DB_USERNAME: ${{ secrets.DB_USERNAME }}
-                  DB_HOST: ${{ secrets.DB_HOST }}
-                  DB_DATABASE: ${{ secrets.DB_DATABASE }}
-                  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-                  DB_DIALECT: ${{ secrets.DB_DIALECT }}
-                  SERVER_PORT: ${{ secrets.SERVER_PORT }}
-                  APP_ENV: ${{ secrets.APP_ENV }}
+                  DB_USERNAME: chetan
+                  DB_HOST: localhost
+                  DB_DATABASE: cloud
+                  DB_PASSWORD: 'Chetan@1234'
+                  DB_DIALECT: postgres
+                  SERVER_PORT: 8080
+                  APP_ENV: prod
