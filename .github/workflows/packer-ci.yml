@@ -1,0 +1,100 @@
+name: Packer CI
+
+on:
+    push:
+      branches: [ "main" ]
+    pull_request:
+      branches: [ "main" ]
+
+jobs:
+  packer_ci:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v3
+    
+    - name: Zip all the webApp files
+      run: |
+          zip -r webapp.zip ./
+          pwd
+    
+    - name: Upload artifact (webapp.zip)
+      uses: actions/upload-artifact@v3
+      with:
+        name: webapp
+        path: webapp.zip
+          
+    - name: Setup Environment File
+      run: |
+            cat << EOF > .env
+            DB_USERNAME: ${{ secrets.DB_USERNAME }}
+            DB_HOST: ${{ secrets.DB_HOST }}
+            DB_DATABASE: ${{ secrets.DB_DATABASE }}
+            DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+            DB_DIALECT: ${{ secrets.DB_DIALECT }}
+            SERVER_PORT: ${{ secrets.SERVER_PORT }}
+            EOF
+      shell: bash
+  
+    - name: Install Packer
+      run: |
+            curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+            sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+            sudo apt-get update && sudo apt-get install packer
+            
+    - name: 'Configure AWS Credentials'
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+    
+    - name: Initialize Packer
+      run: packer init .
+    
+    - name: Format Packer template
+      run: |
+        packer fmt -check -diff .
+        if [ $? -ne 0 ]; then
+          echo "Packer templates need formatting. Run 'packer fmt' locally and push the changes."
+          exit 1
+        fi
+
+    - name: Download artifact (webapp.zip)
+      uses: actions/download-artifact@v3
+      with:
+        name: webapp
+        path: /tmp/artifact/
+
+    - name: Validate Packer template
+      env:
+        aws_vpc_id: ${{ secrets.AWS_VPC_ID }}
+        aws_subnet_id: ${{ secrets.AWS_SUBNET_ID }}
+        db_username: ${{ secrets.DB_USERNAME }}
+        db_password: ${{ secrets.DB_PASSWORD }}
+        db_name: ${{ secrets.DB_DATABASE }}
+        aws_instance_type: ${{ secrets.AWS_INSTANCE_TYPE }}
+        aws_profile: ${{ secrets.AWS_PROFILE }}
+        aws_source_ami: ${{ secrets.AWS_SOURCE_AMI }}
+        volume_size: ${{ secrets.VOLUME_SIZE }}
+        artifact_path: /tmp/artifact/webapp.zip
+        aws_ami_name: ${{ secrets.AWS_AMI_NAME }}
+        service_name: ${{ secrets.AWS_SERVICE_NAME }}
+        aws_region: ${{ secrets.AWS_REGION }}
+      run: |
+        # Pass the downloaded artifact to the packer build
+        packer validate -var "aws_vpc_id=${aws_vpc_id}" \
+                     -var "aws_subnet_id=${aws_subnet_id}" \
+                     -var "db_username=${db_username}" \
+                     -var "db_password=${db_password}" \
+                     -var "db_name=${db_name}" \
+                     -var "aws_instance_type=${aws_instance_type}" \
+                     -var "aws_profile=${aws_profile}" \
+                     -var "aws_region=${aws_region}" \
+                     -var "aws_source_ami=${aws_source_ami}" \
+                     -var "aws_ami_name=${aws_ami_name}" \
+                     -var "volume_size=${volume_size}" \
+                     -var "artifact_path=${artifact_path}" \
+                     -var "service_name=${service_name}" \
+                     .
