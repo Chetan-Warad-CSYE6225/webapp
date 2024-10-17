@@ -150,11 +150,6 @@ build {
     destination = "/tmp/webapp.zip"
   }
 
-  # Copy the environment file
-  provisioner "file" {
-    source      = "./.env"
-    destination = "/tmp/.env"
-  }
 
   # Run Node.js setup script
   provisioner "shell" {
