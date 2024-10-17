@@ -42,23 +42,15 @@ jobs:
 
         node-version: ${{ matrix.node-version }}
  
-    # Step 3: Install dependencies
-
-    - name: Install dependencies
-
-      run: npm install
- 
-    # Step 4: Build the application artifact
+    # Step 3: Build the application artifact
 
     - name: Build application artifact (zip)
 
       run: |
 
-        npm run build  # Or other build command based on your project
-
         zip -r webapp.zip .
  
-    # Step 5: Upload the artifact
+    # Step 4: Upload the artifact
 
     - name: Upload webapp artifact
 
@@ -70,7 +62,7 @@ jobs:
 
         path: webapp.zip
  
-    # Step 6: Install PostgreSQL
+    # Step 5: Install PostgreSQL
 
     - name: Install PostgreSQL
 
@@ -80,7 +72,7 @@ jobs:
 
         sudo apt-get install -y postgresql postgresql-contrib
  
-    # Step 7: Set up PostgreSQL (create user, database, and grant privileges)
+    # Step 6: Set up PostgreSQL (create user, database, and grant privileges)
 
     - name: Set up PostgreSQL
 
@@ -102,7 +94,7 @@ jobs:
 
         sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE \"$DB_DATABASE\" TO \"$DB_USERNAME\";"
  
-    # Step 8: Set environment variables for the application
+    # Step 7: Set environment variables for the application
 
     - name: Set environment variables for the application
 
@@ -120,7 +112,7 @@ jobs:
 
         echo "SERVER_PORT=${{ secrets.SERVER_PORT  }}" >> $GITHUB_ENV
  
-    # Step 9: Run the tests
+    # Step 8: Run the tests
 
     - name: Run tests
 
@@ -147,7 +139,7 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }} 
         aws-region: ${{ secrets.AWS_AWS_REGION }}
  
-    # Step 10: Install Packer
+    # Step 9: Install Packer
 
     - name: Install Packer
 
@@ -159,15 +151,22 @@ jobs:
 
         sudo apt-get update && sudo apt-get install -y packer
  
-    # Step 11: Initialize Packer
+    # Step 10: Initialize Packer
 
     - name: Initialize Packer
 
       run: |
 
-        packer init ./packer/aws.pkr.hcl
- 
-    # Step 12: Build Custom Image with Packer and include artifact
+        packer init .
+            
+    # Step 11: Initialize Packer
+
+    - name: Format Packer
+
+      run: |
+
+        packer fmt .
+    # Step 11: Build Custom Image with Packer and include artifact
 
     - name: Build Custom Image
 
