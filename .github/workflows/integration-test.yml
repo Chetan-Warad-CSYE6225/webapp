@@ -33,6 +33,9 @@ jobs:
       - name: Verify PostgreSQL service status
         run: sudo systemctl status postgresql
 
+      - name: Check secrets
+        run: echo "$DB_USERNAME"
+
       - name: Create PostgreSQL user and database
         run: |
           sudo -u postgres psql -c "CREATE USER $DB_USERNAME WITH PASSWORD '$DB_PASSWORD';"
@@ -42,9 +45,6 @@ jobs:
 
       - name: Install Dependencies
         run: npm ci
-
-      - name: Check secrets
-        run: echo "$DB_USERNAME"
 
       - name: API testing
         run: npm test
