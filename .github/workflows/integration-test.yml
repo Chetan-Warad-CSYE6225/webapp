@@ -35,13 +35,16 @@ jobs:
 
       - name: Create PostgreSQL user and database
         run: |
-          sudo -u postgres psql -c "CREATE USER chetan WITH PASSWORD 'Chetan@1234';"
-          sudo -u postgres psql -c "CREATE DATABASE cloud OWNER chetan;"
-          sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE cloud TO chetan;"
+          sudo -u postgres psql -c "CREATE USER $DB_USERNAME WITH PASSWORD '$DB_PASSWORD';"
+          sudo -u postgres psql -c "CREATE DATABASE $DB_DATABASE OWNER $DB_USERNAME;"
+          sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_DATABASE TO $DB_USERNAME;"
           sudo mkdir -p /var/log/webapp
 
       - name: Install Dependencies
         run: npm ci
+
+      - name: Check secrets
+        run: echo "$DB_USERNAME"
 
       - name: API testing
         run: npm test
@@ -53,3 +56,4 @@ jobs:
           DB_DIALECT: ${{ secrets.DB_DIALECT }}
           SERVER_PORT: ${{ secrets.SERVER_PORT }}
           APP_ENV: ${{ secrets.APP_ENV }}
+        
