@@ -13,7 +13,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [14.x, 16.x]  # Define the Node.js versions you want to test on
+        node-version: [20.x]  # Define the Node.js versions you want to test on
  
     steps:
     # Step 1: Check out the code
