@@ -1,241 +1,147 @@
 name: Build and Deploy Custom Image on PR Merge
  
 on:
-
   pull_request:
-
     types:
-
       - closed  # Trigger only when the pull request is closed
  
 jobs:
-
   build_and_test:
-
     name: Build, Zip Application & Create Custom AMI
-
     if: github.event.pull_request.merged == true  # Run only if the PR was merged
-
     runs-on: ubuntu-latest
 
     strategy:
-
       matrix:
-
         node-version: [14.x, 16.x]  # Define the Node.js versions you want to test on
  
     steps:
-
     # Step 1: Check out the code
-
     - name: Check out code
-
       uses: actions/checkout@v3
  
     # Step 2: Set up Node.js version (from matrix)
-
     - name: Set up Node.js ${{ matrix.node-version }}
-
       uses: actions/setup-node@v3
-
       with:
-
         node-version: ${{ matrix.node-version }}
  
     # Step 3: Build the application artifact
-
     - name: Build application artifact (zip)
-
       run: |
-
         zip -r webapp.zip .
  
     # Step 4: Upload the artifact
-
     - name: Upload webapp artifact
-
       uses: actions/upload-artifact@v3
-
       with:
-
-        name: webapp.zip
-
+        name: webapp
         path: webapp.zip
  
     # Step 5: Install PostgreSQL
-
     - name: Install PostgreSQL
-
       run: |
-
         sudo apt-get update
-
         sudo apt-get install -y postgresql postgresql-contrib
- 
-    # Step 6: Set up PostgreSQL (create user, database, and grant privileges)
 
+    # Step 6: Change directory permissions to avoid permission issues
+    - name: Change directory permissions
+      run: sudo chown -R $USER:$USER /home/runner/work/webapp/webapp
+
+    # Step 7: Set up PostgreSQL (create user, database, and grant privileges)
     - name: Set up PostgreSQL
-
       env:
-
         DB_USERNAME: ${{ secrets.DB_USERNAME }}
-
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-
         DB_DATABASE: ${{ secrets.DB_DATABASE }}
-
       run: |
-
         sudo service postgresql start
-
         sudo -u postgres psql -c "CREATE USER \"$DB_USERNAME\" WITH PASSWORD '$DB_PASSWORD';"
-
         sudo -u postgres psql -c "CREATE DATABASE \"$DB_DATABASE\";"
-
         sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE \"$DB_DATABASE\" TO \"$DB_USERNAME\";"
  
-    # Step 7: Set environment variables for the application
-
+    # Step 8: Set environment variables for the application
     - name: Set environment variables for the application
-
       run: |
-
         echo "DB_HOST=localhost" >> $GITHUB_ENV
-
         echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> $GITHUB_ENV
-
         echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> $GITHUB_ENV
-
         echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> $GITHUB_ENV
-
-        echo "DB_DIALECT=${{ secrets. DB_DIALECT }}" >> $GITHUB_ENV
-
-        echo "SERVER_PORT=${{ secrets.SERVER_PORT  }}" >> $GITHUB_ENV
+        echo "DB_DIALECT=${{ secrets.DB_DIALECT }}" >> $GITHUB_ENV
+        echo "SERVER_PORT=${{ secrets.SERVER_PORT }}" >> $GITHUB_ENV
  
-    # Step 8: Run the tests
-
+    # Step 9: Run the tests
     - name: Run tests
-
       env:
-
         DB_HOST: localhost
-
         DB_USERNAME: ${{ secrets.DB_USERNAME }}
-
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-
         DB_DATABASE: ${{ secrets.DB_DATABASE }}
-
         DB_DIALECT: ${{ secrets.DB_DIALECT }}
-
         SERVER_PORT: ${{ secrets.SERVER_PORT }}
-
       run: npm test
 
+    # Step 10: Configure AWS Credentials
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }} 
-        aws-region: ${{ secrets.AWS_AWS_REGION }}
+        aws-region: ${{ secrets.AWS_REGION }}
  
-    # Step 9: Install Packer
-
+    # Step 11: Install Packer
     - name: Install Packer
-
       run: |
-
         curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
-
         sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
-
         sudo apt-get update && sudo apt-get install -y packer
  
-    # Step 10: Initialize Packer
-
+    # Step 12: Initialize Packer
     - name: Initialize Packer
-
       run: |
-
         packer init .
             
-    # Step 11: Initialize Packer
-
+    # Step 13: Format Packer
     - name: Format Packer
-
       run: |
-
         packer fmt .
-    # Step 11: Build Custom Image with Packer and include artifact
 
+    # Step 14: Download the artifact (webapp.zip)
+    - name: Download webapp artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: webapp
+        path: /tmp/artifact/
+
+    # Step 15: Build Custom Image with Packer and include artifact
     - name: Build Custom Image
-
       env:
-
         aws_vpc_id: ${{ secrets.AWS_VPC_ID }}
-
         aws_subnet_id: ${{ secrets.AWS_SUBNET_ID }}
-
         db_username: ${{ secrets.DB_USERNAME }}
-
         db_password: ${{ secrets.DB_PASSWORD }}
-
         db_name: ${{ secrets.DB_DATABASE }}
-
         aws_instance_type: ${{ secrets.AWS_INSTANCE_TYPE }}
-
         aws_profile: ${{ secrets.AWS_PROFILE }}
-
         aws_source_ami: ${{ secrets.AWS_SOURCE_AMI }}
-
         volume_size: ${{ secrets.VOLUME_SIZE }}
-
-        artifact_path: ${{ secrets.ARTIFACT_PATH }}
-
-        aws_ami_ame: ${{ secrets.AWS_AMI_NAME }}
-
+        artifact_path: /tmp/artifact/webapp.zip
+        aws_ami_name: ${{ secrets.AWS_AMI_NAME }}
         service_name: ${{ secrets.AWS_SERVICE_NAME }}
-
         aws_region: ${{ secrets.AWS_REGION }}
-
       run: |
-
-        # Download the artifact (webapp.zip) and include it in the custom image
-
-        mkdir -p /tmp/artifact
-
-        curl -L ${{ github.event.workflow_run.artifacts_url }}/webapp.zip --output /tmp/artifact/webapp.zip
-
-        # Pass the downloaded artifact to the packer build
-
-         
         packer build -var "aws_vpc_id=${aws_vpc_id}" \
-
                      -var "aws_subnet_id=${aws_subnet_id}" \
-                    
                      -var "db_username=${db_username}" \
-
                      -var "db_password=${db_password}" \
-
                      -var "db_name=${db_name}" \
-
                      -var "aws_instance_type=${aws_instance_type}" \
-
                      -var "aws_profile=${aws_profile}" \
-
                      -var "aws_region=${aws_region}" \
-
-                     -var "aws_instance_type=${AWS_INSTANCE_TYPE}" \
-
                      -var "aws_source_ami=${aws_source_ami}" \
-
                      -var "aws_ami_name=${aws_ami_name}" \
-
                      -var "volume_size=${volume_size}" \
-
-                     -var "artifact_path=/tmp/artifact/webapp.zip" \
-
+                     -var "artifact_path=${artifact_path}" \
                      -var "service_name=${service_name}" \
-                     ./webapp.pkr.hcl
-
- 
+                     .
+                    
