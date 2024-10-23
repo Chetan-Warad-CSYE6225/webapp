@@ -60,9 +60,17 @@ jobs:
         sudo -u postgres psql -c "CREATE DATABASE \"$DB_DATABASE\";"
         sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE \"$DB_DATABASE\" TO \"$DB_USERNAME\";"
  
-    # Step 8: Set environment variables for the application (create .env file)
+    # Step 15 (previously Step 15): Download the artifact (webapp.zip)
+    - name: Download webapp artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: webapp
+        path: /opt/
+
+    # Step 8 (previously Step 8): Set environment variables for the application (create .env file)
     - name: Set environment variables for the application
       run: |
+        mkdir -p /opt/webapp/src  # Ensure the directory exists
         echo "DB_HOST=${{ secrets.DB_HOST }}" >> /opt/webapp/src/.env
         echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> /opt/webapp/src/.env
         echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> /opt/webapp/src/.env
@@ -110,13 +118,6 @@ jobs:
       run: |
         packer fmt .
  
-    # Step 15: Download the artifact (webapp.zip)
-    - name: Download webapp artifact
-      uses: actions/download-artifact@v3
-      with:
-        name: webapp
-        path: /opt/
-
     # Step 16: Build Custom Image with Packer and include artifact
     - name: Build Custom Image
       env:
