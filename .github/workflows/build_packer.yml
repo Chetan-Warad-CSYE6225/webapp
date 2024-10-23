@@ -63,12 +63,12 @@ jobs:
     # Step 8: Set environment variables for the application (create .env file)
     - name: Set environment variables for the application
       run: |
-        echo "DB_HOST=${{ secrets.DB_HOST }}" >> /tmp/.env
-        echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> /tmp/.env
-        echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> /tmp/.env
-        echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> /tmp/.env
-        echo "DB_DIALECT=${{ secrets.DB_DIALECT }}" >> /tmp/.env
-        echo "SERVER_PORT=${{ secrets.SERVER_PORT }}" >> /tmp/.env
+        echo "DB_HOST=${{ secrets.DB_HOST }}" >> /opt/webapp/src/.env
+        echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> /opt/webapp/src/.env
+        echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> /opt/webapp/src/.env
+        echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> /opt/webapp/src/.env
+        echo "DB_DIALECT=${{ secrets.DB_DIALECT }}" >> /opt/webapp/src/.env
+        echo "SERVER_PORT=${{ secrets.SERVER_PORT }}" >> /opt/webapp/src/.env
  
     # Step 9: Install Dependencies
     - name: Install Dependencies
@@ -115,7 +115,7 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: webapp
-        path: /tmp/artifact/
+        path: /opt/
 
     # Step 16: Build Custom Image with Packer and include artifact
     - name: Build Custom Image
@@ -129,7 +129,7 @@ jobs:
         aws_profile: ${{ secrets.AWS_PROFILE }}
         aws_source_ami: ${{ secrets.AWS_SOURCE_AMI }}
         volume_size: ${{ secrets.VOLUME_SIZE }}
-        artifact_path: /tmp/artifact/webapp.zip
+        artifact_path: /opt/webapp.zip
         aws_ami_name: ${{ secrets.AWS_AMI_NAME }}
         service_name: ${{ secrets.AWS_SERVICE_NAME }}
         aws_region: ${{ secrets.AWS_REGION }}
