@@ -6,6 +6,7 @@ sudo useradd -r -s /usr/sbin/nologin -g csye6225 csye6225
 # Set up directories and permissions
 sudo mkdir -p /opt/webapp
 sudo chown -R csye6225:csye6225 /opt
+sudo chmod -R 755 /opt/webapp
 
 # Copy service file to systemd
 sudo cp /tmp/csye6225.service /etc/systemd/system/csye6225.service
