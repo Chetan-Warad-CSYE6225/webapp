@@ -46,15 +46,15 @@ jobs:
         path: /opt/
 
     # Step 6: Set environment variables for the application
-    - name: Set environment variables for the application
-      run: |
-        mkdir -p /opt/webapp/src  # Ensure the directory exists
-        echo "DB_HOST=${{ secrets.DB_HOST }}" >> /opt/webapp/src/.env
-        echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> /opt/webapp/src/.env
-        echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> /opt/webapp/src/.env
-        echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> /opt/webapp/src/.env
-        echo "DB_DIALECT=${{ secrets.DB_DIALECT }}" >> /opt/webapp/src/.env
-        echo "SERVER_PORT=${{ secrets.SERVER_PORT }}" >> /opt/webapp/src/.env
+    #- name: Set environment variables for the application
+    #  run: |
+    #    mkdir -p /opt/webapp/src  # Ensure the directory exists
+    #    echo "DB_HOST=${{ secrets.DB_HOST }}" >> /opt/webapp/src/.env
+    #    echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> /opt/webapp/src/.env
+    #    echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> /opt/webapp/src/.env
+    #    echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> /opt/webapp/src/.env
+    #    echo "DB_DIALECT=${{ secrets.DB_DIALECT }}" >> /opt/webapp/src/.env
+    #    echo "SERVER_PORT=${{ secrets.SERVER_PORT }}" >> /opt/webapp/src/.env
  
     # Step 7: Install Dependencies
     - name: Install Dependencies
