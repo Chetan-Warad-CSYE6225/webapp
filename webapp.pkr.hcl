@@ -60,21 +60,6 @@ variable "service_name" {
   default     = "myapp"
 }
 
-variable "db_username" {
-  description = "Database username"
-  type        = string
-}
-
-variable "db_password" {
-  description = "Database password"
-  type        = string
-}
-
-variable "db_name" {
-  description = "Database name"
-  type        = string
-}
-
 # Source block for AWS AMI creation
 source "amazon-ebs" "ubuntu" {
   profile       = var.aws_profile
@@ -107,36 +92,6 @@ source "amazon-ebs" "ubuntu" {
 # Build block with provisioners for setting up PostgreSQL, creating a user, copying artifacts, and setting up the systemd service
 build {
   sources = ["source.amazon-ebs.ubuntu"]
-
-  # Step 1: Install PostgreSQL and set up user
-  provisioner "shell" {
-    inline = [
-      "sudo apt-get update && sudo apt-get upgrade -y",
-
-      # Add PostgreSQL repository
-      "sudo sh -c 'echo \"deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main\" > /etc/apt/sources.list.d/pgdg.list'",
-      "wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -",
-
-      # Update package list again with the new PostgreSQL repository
-      "sudo apt-get update",
-
-      # Install PostgreSQL
-      "sudo apt-get install -y postgresql postgresql-client postgresql-contrib",
-
-      # Setup PostgreSQL user, database, and permissions
-      "sudo -u postgres psql -c \"CREATE USER ${var.db_username} WITH PASSWORD '${var.db_password}';\"",
-      "sudo -u postgres psql -c \"CREATE DATABASE ${var.db_name} OWNER ${var.db_username};\"",
-      "sudo -u postgres psql -c \"GRANT ALL PRIVILEGES ON DATABASE ${var.db_name} TO ${var.db_username};\"",
-
-      # Modify pg_hba.conf for password authentication
-      "sudo sed -i 's/peer/md5/g' /etc/postgresql/*/main/pg_hba.conf",
-
-      # Restart PostgreSQL service for changes to take effect
-      "sudo systemctl restart postgresql",
-      "sudo systemctl enable postgresql"
-    ]
-  }
-
 
   # Copy the service file
   provisioner "file" {
