@@ -10,6 +10,10 @@ jobs:
     name: Build, Zip Application & Create Custom AMI
     if: github.event.pull_request.merged == true  # Run only if the PR was merged
     runs-on: ubuntu-latest
+    env:
+            DB_USERNAME: ${{ secrets.DB_USERNAME }}
+            DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+            DB_DATABASE: ${{ secrets.DB_DATABASE }}
 
     strategy:
       matrix:
@@ -44,6 +48,22 @@ jobs:
       with:
         name: webapp
         path: /opt/
+
+
+    - name: Install PostgreSQL and related packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y postgresql postgresql-contrib
+        sudo systemctl start postgresql
+        sudo systemctl enable postgresql
+
+    - name: Create PostgreSQL user and database
+      run: |
+        sudo -u postgres psql -c "CREATE USER $DB_USERNAME WITH PASSWORD '$DB_PASSWORD';" 2>/dev/null
+        sudo -u postgres psql -c "CREATE DATABASE $DB_DATABASE OWNER $DB_USERNAME;" 2>/dev/null
+        sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_DATABASE TO $DB_USERNAME;" 2>/dev/null
+        sudo mkdir -p /var/log/webapp 2>/dev/null
+
 
     # Step 6: Set environment variables for the application
     - name: Set environment variables for the application
