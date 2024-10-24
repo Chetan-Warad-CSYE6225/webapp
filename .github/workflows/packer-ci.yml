@@ -24,18 +24,6 @@ jobs:
       with:
         name: webapp
         path: webapp.zip
-          
-    - name: Setup Environment File
-      run: |
-            cat << EOF > .env
-            DB_USERNAME: ${{ secrets.DB_USERNAME }}
-            DB_HOST: ${{ secrets.DB_HOST }}
-            DB_DATABASE: ${{ secrets.DB_DATABASE }}
-            DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-            DB_DIALECT: ${{ secrets.DB_DIALECT }}
-            SERVER_PORT: ${{ secrets.SERVER_PORT }}
-            EOF
-      shell: bash
   
     - name: Install Packer
       run: |
@@ -71,9 +59,6 @@ jobs:
       env:
         aws_vpc_id: ${{ secrets.AWS_VPC_ID }}
         aws_subnet_id: ${{ secrets.AWS_SUBNET_ID }}
-        db_username: ${{ secrets.DB_USERNAME }}
-        db_password: ${{ secrets.DB_PASSWORD }}
-        db_name: ${{ secrets.DB_DATABASE }}
         aws_instance_type: ${{ secrets.AWS_INSTANCE_TYPE }}
         aws_profile: ${{ secrets.AWS_PROFILE }}
         aws_source_ami: ${{ secrets.AWS_SOURCE_AMI }}
@@ -86,9 +71,6 @@ jobs:
         # Pass the downloaded artifact to the packer build
         packer validate -var "aws_vpc_id=${aws_vpc_id}" \
                      -var "aws_subnet_id=${aws_subnet_id}" \
-                     -var "db_username=${db_username}" \
-                     -var "db_password=${db_password}" \
-                     -var "db_name=${db_name}" \
                      -var "aws_instance_type=${aws_instance_type}" \
                      -var "aws_profile=${aws_profile}" \
                      -var "aws_region=${aws_region}" \
