@@ -33,8 +33,6 @@ router.options('/v1/user/self', (req, res) => {
     res.status(405).send();
 });
 
-router.delete('/v1/user/self', (req, res) => {
-    res.status(405).send();
-});
+
 
 export default router;
