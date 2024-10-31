@@ -1,24 +1,16 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import { Sequelize } from 'sequelize';
 import userRoutes from './routes/userRoutes.js';
+import profilePicRoutes from './routes/profilePicRoutes.js';
 import sequelize from './db/sequelize.js';
+import logger from './utils/logger.js';
 
-
-
-const app = express();
-
-// const express = require('express');
-// const app = express();
-// const dotenv = require('dotenv');
-// const { Sequelize } = require('sequelize');
-
-// Load environment variables from .env file
 dotenv.config();
 
-// Middleware to parse JSON requests
+const app = express();
 app.use(express.json());
 
+// Middleware to set response headers
 const setResponseHeaders = (res) => {
     res.header({
         'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -27,53 +19,67 @@ const setResponseHeaders = (res) => {
     });
 };
 
+// Connect to the database
 const connectToDatabase = async () => {
     try {
         await sequelize.authenticate();
-        
+        logger.info("Database connected successfully.");
         // Sync the database models here if needed
     } catch (error) {
-        // Handle error appropriately
+        logger.error(`Database connection error: ${error.message}`);
     }
 };
 
-// Call the database connection function when the application starts
+// Initialize the database connection
 connectToDatabase();
 
+// Health check route
 app.all("/healthz", async (req, res) => {
     try {
         if (req.method !== 'GET') {
-            // return 405 Method Not Allowed for other req method
             setResponseHeaders(res);
-            return res.status(405).send();
+            logger.warn(`Health check failed: Method ${req.method} not allowed`);
+            return res.status(405).send();  // Method Not Allowed
         }
-        //If the request has payload
+
+        // If request contains a payload
         if (Object.keys(req.body).length > 0 || Object.keys(req.query).length > 0) {
             setResponseHeaders(res);
-            res.status(400).send();
-        } else {
-        
-            setResponseHeaders(res);
-            res.status(200).send();
-        }}
-    catch (error) {
-        //IF the database is disconnected
+            logger.warn("Health check failed: Payload should be empty");
+            return res.status(400).send();  // Bad Request
+        }
+
         setResponseHeaders(res);
-        res.status(503).send();
-    }});
-
-    //const userRoutes = require("./routes/userRoutes");
-app.use('/', userRoutes);
-
-const port = process.env.SERVER_PORT || 3000;
-
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+        logger.info("Health check successful");
+        res.status(200).send();  // OK
+    } catch (error) {
+        setResponseHeaders(res);
+        logger.error(`Health check error: ${error.message}`);
+        res.status(503).send();  // Service Unavailable
+    }
 });
 
+// User-related routes
+app.use('/', userRoutes);
+
+// Profile picture routes for authenticated users
+app.use('/v1/user/self', profilePicRoutes);
+
+// Error handling middleware for logging
+app.use((err, req, res, next) => {
+    logger.error(`Unhandled error: ${err.message}`);
+    res.status(500).json({ message: 'Internal Server Error' });
+});
+
+// Start the server
+const port = process.env.SERVER_PORT || 3000;
+app.listen(port, () => {
+    logger.info(`Server is running on port ${port}`);
+});
+
+// Gracefully shut down the server on termination signal
 process.on("SIGINT", () => {
-    // clearInterval(interval); 
-    console.log("Server terminated. Interval cleared.");
+    logger.info("Server terminated.");
     process.exit();
 });
 
