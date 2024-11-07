@@ -24,7 +24,6 @@ const connectToDatabase = async () => {
     try {
         await sequelize.authenticate();
         logger.info("Database connected successfully.");
-        // Sync the database models here if needed
     } catch (error) {
         logger.error(`Database connection error: ${error.message}`);
     }
@@ -39,23 +38,22 @@ app.all("/healthz", async (req, res) => {
         if (req.method !== 'GET') {
             setResponseHeaders(res);
             logger.warn(`Health check failed: Method ${req.method} not allowed`);
-            return res.status(405).send();  // Method Not Allowed
+            return res.status(405).send();
         }
 
-        // If request contains a payload
         if (Object.keys(req.body).length > 0 || Object.keys(req.query).length > 0) {
             setResponseHeaders(res);
             logger.warn("Health check failed: Payload should be empty");
-            return res.status(400).send();  // Bad Request
+            return res.status(400).send();
         }
 
         setResponseHeaders(res);
         logger.info("Health check successful");
-        res.status(200).send();  // OK
+        res.status(200).send();
     } catch (error) {
         setResponseHeaders(res);
         logger.error(`Health check error: ${error.message}`);
-        res.status(503).send();  // Service Unavailable
+        res.status(503).send();
     }
 });
 
