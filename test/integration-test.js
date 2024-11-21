@@ -16,7 +16,9 @@ describe('User API', async function() {
         email: 'test17@example.com',
         password: 'Password123@',
         first_name: 'John',
-        last_name: 'Doe'
+        last_name: 'Doe',
+        is_verified: true
+    
       };
 
       const createResponse = await request
