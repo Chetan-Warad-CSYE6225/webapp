@@ -1,38 +1,18 @@
-// const express = require('express');
-// const router = express.Router();
-// const userController = require('../controllers/userController');
-// const authenticateBasicAuth = require('../middleware/middlewareAuthentication');
-
 import express from 'express';
-import {createUser,updateUser,getUser} from '../controllers/userController.js';
-import authenticateBasicAuth from '../middleware/middlewareAuthentication.js';
+import { createUser, getUserInfo, updateUser } from '../controllers/userController.js';
+import { authenticateBasicAuth, blockUnverifiedUsers } from '../middleware/middlewareAuthentication.js';
+import { verifyUser } from '../controllers/verifyController.js';
 
-const router = express.Router();
 
-router.head('/v1/user/self', (req, res) => {
-    res.status(405).send();
-});
+const userRoutes = express.Router();
 
-// Create a new user
-router.post('/v1/user', createUser);
-
-// Update user information
-router.put('/v1/user/self', authenticateBasicAuth, updateUser);
-
-// Get user information
-router.get('/v1/user/self', authenticateBasicAuth, getUser);
+userRoutes.post('/v1/user', createUser);
+userRoutes.get('/v1/user/self', authenticateBasicAuth, blockUnverifiedUsers, getUserInfo);
+userRoutes.put('/v1/user/self', authenticateBasicAuth, blockUnverifiedUsers, updateUser);
 
 
 
-// Explicitly handle PATCH, OPTIONS, and HEAD requests for /v1/user/self and return 405 Method Not Allowed
-router.patch('/v1/user/self', (req, res) => {
-    res.status(405).send();
-});
-
-router.options('/v1/user/self', (req, res) => {
-    res.status(405).send();
-});
+// userRoutes.get('/verify', verifyUser);
 
 
-
-export default router;
+export default userRoutes;

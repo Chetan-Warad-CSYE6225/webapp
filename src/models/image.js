@@ -1,7 +1,7 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../db/sequelize.js';
 
-const Image = sequelize.define('Image', {
+const Image = sequelize.define('Images', {
   id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
@@ -25,7 +25,8 @@ const Image = sequelize.define('Image', {
     defaultValue: DataTypes.NOW,
   },
 }, {
-  timestamps: false,
+   
+  timestamps: false
 });
 
 export default Image;
