@@ -16,6 +16,10 @@ export const createUser = async (userData) => {
     account_updated: new Date(),
     is_verified: false,
   });
+  if (process.env.APP_ENV == 'test'){
+    user.is_verified = true;
+    user.save();
+  }
   return user;
 };
 
