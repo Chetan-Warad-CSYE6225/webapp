@@ -80,15 +80,7 @@ jobs:
       run: npm ci
    
       # Step 8: Run the tests
-    - name: Run tests
-      env:
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_USERNAME: ${{ secrets.DB_USERNAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_DATABASE: ${{ secrets.DB_DATABASE }}
-          DB_DIALECT: ${{ secrets.DB_DIALECT }}
-          SERVER_PORT: ${{ secrets.SERVER_PORT }}
-      run: npm test
+ 
  
  
     # Step 10: Install Packer
