@@ -43,3 +43,9 @@ export const deleteProfilePic = async (req, res, next) => {
     }
   }
 };
+
+export default {
+  uploadProfilePic,
+  getProfilePic,
+  deleteProfilePic
+};

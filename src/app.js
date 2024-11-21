@@ -4,6 +4,7 @@ import userRoutes from './routes/userRoutes.js';
 import profilePicRoutes from './routes/profilePicRoutes.js';
 import sequelize from './db/sequelize.js';
 import logger from './utils/logger.js';
+import { verifyUser } from './controllers/verifyController.js';
 
 dotenv.config();
 
@@ -62,6 +63,8 @@ app.use('/', userRoutes);
 
 // Profile picture routes for authenticated users
 app.use('/v1/user/self', profilePicRoutes);
+
+app.all('/verify', verifyUser);
 
 // Error handling middleware for logging
 app.use((err, req, res, next) => {

@@ -1,20 +1,14 @@
-// const { Sequelize, DataTypes } = require('sequelize');
-// const bcrypt = require('bcrypt');
-
 import { Sequelize, DataTypes } from 'sequelize';
-import bcrypt from 'bcrypt';
 import sequelize from '../db/sequelize.js';
 
-
-  
-
-  const User = sequelize.define('User', {
+const User = sequelize.define(
+  'Users',
+  {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
       allowNull: false,
-      readOnly: true,
     },
     first_name: {
       type: DataTypes.STRING,
@@ -33,7 +27,6 @@ import sequelize from '../db/sequelize.js';
     password: {
       type: DataTypes.STRING,
       allowNull: false,
-      writeOnly: true,
     },
     email: {
       type: DataTypes.STRING,
@@ -47,18 +40,23 @@ import sequelize from '../db/sequelize.js';
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
-      readOnly: true,
     },
     account_updated: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
-      readOnly: true,
-    }}, 
-    {
-      timestamps: false, // To Disable Sequelize's default timestamps (createdAt, updatedAt)
-    }
-  );
-
+    },
+    is_verified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
+  },
+  {
+    timestamps: false
   
-  export { User };
+  }
+);
+
+// Export with named export
+export { User };

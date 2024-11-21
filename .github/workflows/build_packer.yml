@@ -3,11 +3,11 @@ name: Build and Deploy Custom Image on PR Merge
 on:
   pull_request:
     types:
-      - closed  # Trigger only when the pull request is closed
+      - closed
  
 jobs:
   build_and_test:
-    name: Build, Zip Application & Create Custom AMI
+    name: Zip and Upload Web Application & Create Custom AMI
     if: github.event.pull_request.merged == true  # Run only if the PR was merged
     runs-on: ubuntu-latest
     env:
@@ -17,24 +17,24 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [20.x]  # Define the Node.js versions you want to test on
+        node-version: [20.x]
+
  
     steps:
     # Step 1: Check out the code
     - name: Check out code
       uses: actions/checkout@v3
  
-    # Step 2: Set up Node.js version (from matrix)
-    - name: Set up Node.js ${{ matrix.node-version }}
+    # Step 2: Set up Node.js version
+    - name: Set up Node.js environment
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
  
-    # Step 3: Build the application artifact
-    - name: Build application artifact (zip)
+    - name: Zip application code
       run: |
         zip -r webapp.zip .
- 
+
     # Step 4: Upload the artifact
     - name: Upload webapp artifact
       uses: actions/upload-artifact@v3
@@ -49,55 +49,47 @@ jobs:
         name: webapp
         path: /opt/
 
-
     - name: Install PostgreSQL and related packages
       run: |
-        sudo apt-get update
-        sudo apt-get install -y postgresql postgresql-contrib
-        sudo systemctl start postgresql
-        sudo systemctl enable postgresql
-
+          sudo apt-get update
+          sudo apt-get install -y postgresql postgresql-contrib
+          sudo systemctl start postgresql
+          sudo systemctl enable postgresql
+  
     - name: Create PostgreSQL user and database
       run: |
-        sudo -u postgres psql -c "CREATE USER $DB_USERNAME WITH PASSWORD '$DB_PASSWORD';" 2>/dev/null
-        sudo -u postgres psql -c "CREATE DATABASE $DB_DATABASE OWNER $DB_USERNAME;" 2>/dev/null
-        sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_DATABASE TO $DB_USERNAME;" 2>/dev/null
-        sudo mkdir -p /var/log/webapp 2>/dev/null
-
-
-    # Step 6: Set environment variables for the application
+          sudo -u postgres psql -c "CREATE USER $DB_USERNAME WITH PASSWORD '$DB_PASSWORD';" 2>/dev/null
+          sudo -u postgres psql -c "CREATE DATABASE $DB_DATABASE OWNER $DB_USERNAME;" 2>/dev/null
+          sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_DATABASE TO $DB_USERNAME;" 2>/dev/null
+          sudo mkdir -p /var/log/webapp 2>/dev/null
+  
+  
+      # Step 6: Set environment variables for the application
     - name: Set environment variables for the application
       run: |
-        mkdir -p /opt/webapp/src  # Ensure the directory exists
-        echo "DB_HOST=${{ secrets.DB_HOST }}" >> ./src/.env
-        echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> ./src/.env
-        echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> ./src/.env
-        echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> ./src/.env
-        echo "DB_DIALECT=${{ secrets.DB_DIALECT }}" >> ./src/.env
-        echo "SERVER_PORT=${{ secrets.SERVER_PORT }}" >> ./src/.env
- 
-    # Step 7: Install Dependencies
+          mkdir -p /opt/webapp/src  # Ensure the directory exists
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> ./src/.env
+          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> ./src/.env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> ./src/.env
+          echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> ./src/.env
+          echo "DB_DIALECT=${{ secrets.DB_DIALECT }}" >> ./src/.env
+          echo "SERVER_PORT=${{ secrets.SERVER_PORT }}" >> ./src/.env
+   
+      # Step 7: Install Dependencies
     - name: Install Dependencies
       run: npm ci
- 
-    # Step 8: Run the tests
+   
+      # Step 8: Run the tests
     - name: Run tests
       env:
-        DB_HOST: ${{ secrets.DB_HOST }}
-        DB_USERNAME: ${{ secrets.DB_USERNAME }}
-        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-        DB_DATABASE: ${{ secrets.DB_DATABASE }}
-        DB_DIALECT: ${{ secrets.DB_DIALECT }}
-        SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_DATABASE: ${{ secrets.DB_DATABASE }}
+          DB_DIALECT: ${{ secrets.DB_DIALECT }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
       run: npm test
-
-    # Step 9: Configure AWS Credentials
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }} 
-        aws-region: ${{ secrets.AWS_REGION }}
+ 
  
     # Step 10: Install Packer
     - name: Install Packer
@@ -106,29 +98,51 @@ jobs:
         sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
         sudo apt-get update && sudo apt-get install -y packer
  
-    # Step 11: Initialize Packer
+    # Step 12: AWS configure
+    - name: Configure AWS dev profile credentials
+      env:
+        AWS_PROFILE: ${{ secrets.AWS_PROFILE }}
+      if: env.AWS_PROFILE == 'dev'
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+      
+    - name: Configure AWS dev profile credentials
+      env:
+        AWS_PROFILE: ${{ secrets.AWS_PROFILE }}
+      if: env.AWS_PROFILE == 'demo'
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWSDEMO_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWSDEMO_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+ 
+    # Step 13: Initialize Packer
     - name: Initialize Packer
       run: |
         packer init .
-            
+    
     # Step 12: Format Packer
     - name: Format Packer
       run: |
         packer fmt .
  
-    # Step 13: Build Custom Image with Packer and include artifact
+    # Step 14: Build Custom Image with Packer
     - name: Build Custom Image
       env:
         aws_vpc_id: ${{ secrets.AWS_VPC_ID }}
         aws_subnet_id: ${{ secrets.AWS_SUBNET_ID }}
-        aws_instance_type: ${{ secrets.AWS_INSTANCE_TYPE }}
         aws_profile: ${{ secrets.AWS_PROFILE }}
+        aws_region: ${{ secrets.AWS_REGION }}
+        aws_instance_type: ${{ secrets.AWS_INSTANCE_TYPE }}
         aws_source_ami: ${{ secrets.AWS_SOURCE_AMI }}
         volume_size: ${{ secrets.VOLUME_SIZE }}
         artifact_path: /opt/webapp.zip
         aws_ami_name: ${{ secrets.AWS_AMI_NAME }}
         service_name: ${{ secrets.AWS_SERVICE_NAME }}
-        aws_region: ${{ secrets.AWS_REGION }}
+
       run: |
         packer build -var "aws_vpc_id=${aws_vpc_id}" \
                      -var "aws_subnet_id=${aws_subnet_id}" \
@@ -141,3 +155,96 @@ jobs:
                      -var "artifact_path=${artifact_path}" \
                      -var "service_name=${service_name}" \
                      .
+ 
+ 
+    - name: Update Launch Template
+      run: |
+        
+        asg_name=$(aws autoscaling describe-auto-scaling-groups \
+          --query "AutoScalingGroups | sort_by(@, &AutoScalingGroupARN)[-1].AutoScalingGroupName" \
+          --output text)
+        echo "Latest Auto Scaling Group Name: $asg_name"
+ 
+        launch_template_id=$(aws autoscaling describe-auto-scaling-groups \
+          --auto-scaling-group-names $asg_name \
+          --query "AutoScalingGroups[0].LaunchTemplate.LaunchTemplateId" \
+          --output text)
+        echo "Launch Template ID: $launch_template_id"
+ 
+        # Get the latest AMI ID
+        latest_ami=$(aws ec2 describe-images \
+          --executable-users self \
+          --filters "Name=state,Values=available" "Name=architecture,Values=x86_64" "Name=root-device-type,Values=ebs" \
+          --query "reverse(sort_by(Images, &CreationDate))[0].ImageId" --output text)
+        echo "Latest AMI ID: $latest_ami"
+ 
+        # Get the current latest launch template version
+        latest_version=$(aws ec2 describe-launch-template-versions \
+          --launch-template-id $launch_template_id \
+          --query 'LaunchTemplateVersions[-1].VersionNumber' --output text)
+        echo "Current Latest Launch Template Version: $latest_version"
+ 
+        # Create a new launch template version with the latest AMI
+        aws ec2 create-launch-template-version \
+          --launch-template-id $launch_template_id \
+          --source-version $latest_version \
+          --launch-template-data '{"ImageId":"'"$latest_ami"'"}'
+ 
+        # Get the new latest version number directly
+        new_version=$(aws ec2 describe-launch-templates \
+          --launch-template-ids $launch_template_id \
+          --query 'LaunchTemplates[0].LatestVersionNumber' --output text)
+        echo "New Launch Template Version: $new_version"
+ 
+        # Explicitly set the new version as the default
+        aws ec2 modify-launch-template \
+          --launch-template-id $launch_template_id \
+          --default-version $new_version
+        echo "Updated default launch template version to: $new_version"
+ 
+        # Update the Auto Scaling Group to use the new version
+        aws autoscaling update-auto-scaling-group \
+          --auto-scaling-group-name $asg_name \
+          --launch-template "LaunchTemplateId=$launch_template_id,Version=$new_version"
+        echo "Updated Auto Scaling Group with Launch Template Version: $new_version"
+ 
+ 
+ 
+        
+    - name: Refresh Auto Scaling Group
+      run: |
+        asg_name=$(aws autoscaling describe-auto-scaling-groups \
+          --query "AutoScalingGroups | sort_by(@, &AutoScalingGroupARN)[-1].AutoScalingGroupName" \
+          --output text)
+        echo "Latest Auto Scaling Group Name: $asg_name"
+        
+        # Start instance refresh for the Auto Scaling Group
+        refresh_id=$(aws autoscaling start-instance-refresh \
+          --auto-scaling-group-name $asg_name \
+          --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 50}' \
+          --query 'InstanceRefreshId' --output text)
+        echo "Instance Refresh ID: $refresh_id"
+ 
+        # Monitor the instance refresh status
+        while true; do
+          refresh_status=$(aws autoscaling describe-instance-refreshes \
+            --auto-scaling-group-name $asg_name \
+            --query "InstanceRefreshes[?InstanceRefreshId=='$refresh_id'].Status" \
+            --output text)
+          echo "Instance Refresh Status: $refresh_status"
+ 
+          if [ "$refresh_status" == "Successful" ]; then
+            echo "Instance refresh completed successfully."
+            break
+          elif [ "$refresh_status" == "Failed" ]; then
+            echo "Instance refresh failed."
+            exit 1
+          elif [ "$refresh_status" == "Cancelled" ]; then
+            echo "Instance refresh was cancelled."
+            exit 1
+          else
+            echo "Instance refresh in progress. Waiting..."
+            sleep 30
+          fi
+        done
+ 

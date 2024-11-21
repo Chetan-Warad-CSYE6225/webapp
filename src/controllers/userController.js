@@ -1,143 +1,139 @@
-import { User } from '../models/user.js';
-import bcrypt from 'bcrypt';
-import sequelize from '../db/sequelize.js';
+import { createUser as createUserService, getUserByEmail, updateUser as updateUserService } from '../services/userServices.js';
 import logger from '../utils/logger.js';
+import EmailTracking from '../models/EmailTracking.js';
+import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
+import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
 
-// Define allowed headers
+// Configure AWS SNS
+const snsClient = new SNSClient({
+  region: process.env.AWS_REGION || 'us-east-1',
+});
+
+// Allowed headers
 const allowedHeaders = [
   'content-type', 'accept', 'user-agent', 'host', 'content-length',
   'accept-encoding', 'connection', 'authorization', 'postman-token',
   'x-forwarded-for', 'x-forwarded-proto', 'x-amzn-trace-id', 'x-forwarded-port'
 ];
 
-// Create a new user
+/**
+ * Create a new user
+ */
 export const createUser = async (req, res) => {
-  // Log incoming headers for debugging
-  logger.info('Incoming headers:', req.headers);
-
-  // Check for unexpected headers
-  const hasUnexpectedHeaders = Object.keys(req.headers).some(
-    (header) => !allowedHeaders.includes(header.toLowerCase()) && !header.toLowerCase().startsWith('x-')
-  );
-
-  // If there are unexpected headers, log a warning and return a 400 response
-  if (hasUnexpectedHeaders) {
-    logger.warn("Unexpected headers found in request.");
-    return res.status(400).json({ message: "Unexpected headers in request" });
-  }
-
+  logger.info('Received request to create user.');
   try {
-    const { email, password, first_name, last_name } = req.body;
-
-    if (!password || password.trim() === "") {
-      logger.warn("Password cannot be empty.");
-      return res.status(400).json({ message: "Password cannot be empty" });
+    // Validate request headers
+    const hasUnexpectedHeaders = Object.keys(req.headers).some(
+      (header) => !allowedHeaders.includes(header.toLowerCase()) && !header.toLowerCase().startsWith('x-')
+    );
+    if (hasUnexpectedHeaders) {
+      logger.warn('Request contains unexpected headers.');
+      return res.status(400).json({ message: 'Unexpected headers in the request.' });
     }
 
-    logger.info(`Checking existence for email: ${email}`);
-    await sequelize.sync();  // Ensure models are in sync with the database
-    const existingUser = await User.findOne({ where: { email } });
+    const { first_name, last_name, email, password } = req.body;
+    if (!first_name || !last_name || !email || !password) {
+      logger.warn('Missing required fields in request body.');
+      return res.status(400).json({ error: 'All fields are required.' });
+    }
+
+    // Check if the email is already in use
+    const existingUser = await getUserByEmail(email);
     if (existingUser) {
-      logger.warn(`User already exists with email: ${email}`);
-      return res.status(400).send({ message: "The user already exists" });
+      logger.warn(`Email already in use: ${email}`);
+      return res.status(400).json({ error: 'Email already in use.' });
     }
 
-    // Hash the password
-    logger.info("Hashing password for new user.");
-    const hashedPassword = bcrypt.hashSync(password, bcrypt.genSaltSync(10));
-
-    // Create a new user
-    const newUser = await User.create({
-      email,
-      password: hashedPassword,
-      first_name,
-      last_name,
-      account_created: new Date(),
-      account_updated: new Date(),
-    });
-
-    // Remove password from the response
-    newUser.password = undefined;
+    // Create the user
+    const newUser = await createUserService(req.body);
     logger.info(`User created successfully with email: ${email}`);
+
+    // Generate verification token and expiry
+    const token = crypto.randomBytes(16).toString('hex');
+    console.log('Generated Token:', token);
+    const expiryTime = new Date(Date.now() + 2 * 60 * 1000); // Token expires in 2 minutes
+
+    // Debugging log for generated token
+    logger.debug(`Generated token: ${token} for email: ${email}`);
+
+
+    // Save the token in the EmailTracking table
+    await EmailTracking.create({ email, token, expiryTime });
+    logger.info(`Verification token generated and saved for user: ${email}`);
+
+    // Publish the verification message to SNS
+    const message = JSON.stringify({ email, token });
+    const params = {
+      Message: message,
+      TopicArn: process.env.SNS_TOPIC_ARN,
+    };
+
+    // Detailed log for SNS publish parameters
+    logger.debug('SNS publish parameters:', params);
+    
+    try {
+      await snsClient.send(new PublishCommand(params));
+      logger.info(`Verification token published to SNS successfully for email: ${email}`);
+    } catch (snsError) {
+      logger.error(`Error publishing to SNS for email: ${email}`, snsError);
+      return res.status(500).json({ error: 'Failed to send verification token.' });
+    }
+
     res.status(201).json(newUser);
   } catch (error) {
-    logger.error(`Error creating user with email ${req.body.email || 'unknown'}: ${error.message}`);
-    res.status(500).json({ message: 'Internal server error' });
+    logger.error('Error creating user:', error.message);
+    res.status(500).json({ error: 'An error occurred while creating the user.' });
   }
 };
 
-// Update user information
+/**
+ * Get user information
+ */
+export const getUserInfo = async (req, res) => {
+  logger.info('Received request to fetch user information.');
+  try {
+    const user = req.user;
+    if (!user) {
+      logger.warn('User not found in the request context.');
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    logger.info(`User information fetched successfully for email: ${user.email}`);
+    res.status(200).json(user);
+  } catch (error) {
+    logger.error('Error fetching user information:', error.message);
+    res.status(500).json({ error: 'An error occurred while fetching user information.' });
+  }
+};
+
+/**
+ * Update user information
+ */
 export const updateUser = async (req, res) => {
+  logger.info('Received request to update user information.');
   try {
     const { first_name, last_name, password } = req.body;
 
-    if (password === "") {
-      logger.warn("Password cannot be empty.");
-      return res.status(400).json({ message: "Password cannot be empty" });
+    // Validate allowed fields
+    const allowedFields = ['first_name', 'last_name', 'password'];
+    const invalidFields = Object.keys(req.body).filter((field) => !allowedFields.includes(field));
+
+    if (invalidFields.length > 0) {
+      logger.warn(`Invalid fields in update request: ${invalidFields.join(', ')}`);
+      return res.status(400).json({ error: `Cannot update fields: ${invalidFields.join(', ')}` });
     }
 
-    const userId = req.user.id;
-    logger.info(`Updating user info for user ID: ${userId}`);
-
-    const user = await User.findByPk(userId);
-    if (!user) {
-      logger.warn(`User not found for ID: ${userId}`);
-      return res.status(404).json({ message: 'User not found' });
+    // Update the user
+    const updatedUser = await updateUserService(req.user.email, { first_name, last_name, password });
+    if (!updatedUser) {
+      logger.warn(`User not found for email: ${req.user.email}`);
+      return res.status(404).json({ error: 'User not found.' });
     }
 
-    user.first_name = first_name || user.first_name;
-    user.last_name = last_name || user.last_name;
-
-    if (password) {
-      logger.info("Hashing new password for user update.");
-      const hashedPassword = bcrypt.hashSync(password, bcrypt.genSaltSync(10));
-      user.password = hashedPassword;
-    }
-
-    const additionalFields = Object.keys(req.body).filter(
-      (field) => !['first_name', 'last_name', 'password'].includes(field)
-    );
-
-    if (additionalFields.length > 0) {
-      logger.warn(`Attempt to update unauthorized fields for user ID: ${userId}`);
-      return res.status(400).json({ message: "Attempt to update unauthorized field" });
-    }
-
-    user.account_updated = new Date();
-    await user.save();
-
-    user.password = undefined;
-    logger.info(`User updated successfully for ID: ${userId}`);
-    res.status(204).send();
+    logger.info(`User information updated successfully for email: ${req.user.email}`);
+    res.status(204).end();
   } catch (error) {
-    logger.error(`Error updating user for ID ${req.user?.id || 'unknown'}: ${error.message}`);
-    res.status(500).json({ message: 'Internal server error' });
+    logger.error('Error updating user:', error.message);
+    res.status(500).json({ error: 'An error occurred while updating the user.' });
   }
-};
-
-// Get user information
-export const getUser = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    logger.info(`Fetching user info for user ID: ${userId}`);
-
-    const user = await User.findByPk(userId);
-    if (!user) {
-      logger.warn(`User not found for ID: ${userId}`);
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    user.password = undefined;
-    logger.info(`User info retrieved successfully for ID: ${userId}`);
-    res.status(200).json(user);
-  } catch (error) {
-    logger.error(`Error fetching user for ID ${req.user?.id || 'unknown'}: ${error.message}`);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-export default {
-  createUser,
-  updateUser,
-  getUser
 };

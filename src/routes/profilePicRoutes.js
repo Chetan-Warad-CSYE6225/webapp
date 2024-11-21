@@ -4,7 +4,7 @@ import {
   getProfilePic,
   deleteProfilePic,
 } from "../controllers/profilePicController.js";
-import authenticateBasicAuth from "../middleware/middlewareAuthentication.js";
+import { authenticateBasicAuth } from "../middleware/middlewareAuthentication.js";
 import logger from "../utils/logger.js";
 
 const profilePicRoutes = express.Router();
