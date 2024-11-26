@@ -1,6 +1,10 @@
 import User from '../models/user.js';
 import bcrypt from 'bcrypt';
 import logger from '../utils/logger.js';
+import dotenv from 'dotenv';
+
+
+dotenv.config();
 
 // Get user by email
 export const getUserByEmail = async (email) => {
