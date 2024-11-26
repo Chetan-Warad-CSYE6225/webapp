@@ -13,6 +13,7 @@ const User = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    
     last_name: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -45,7 +46,6 @@ const User = sequelize.define(
     is_verified: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
-      allowNull: false,
     },
   },
   {
@@ -53,4 +53,5 @@ const User = sequelize.define(
   }
 );
 
+// Export with named export
 export default User;
