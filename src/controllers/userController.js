@@ -45,6 +45,15 @@ export const createUser = async (req, res) => {
     const newUser = await createUserService(req.body);
     logger.info(`User created successfully with email: ${email}`);
 
+
+    // Skip SNS logic in test environment
+    if (process.env.APP_ENV === 'test') {
+      logger.info('Test environment detected. Skipping SNS verification.');
+      return res.status(201).json(newUser); // Return response directly in test environment
+    }
+
+    // // Skip SNS logic in test environment
+    // if (process.env.APP_ENV !== 'test') {
     // Publish the verification message to SNS
     const message = JSON.stringify({ email });
     const params = {
