@@ -1,8 +1,5 @@
 import { createUser as createUserService, getUserByEmail, updateUser as updateUserService } from '../services/userServices.js';
 import logger from '../utils/logger.js';
-import EmailTracking from '../models/EmailTracking.js';
-import { v4 as uuidv4 } from 'uuid';
-import crypto from 'crypto';
 import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
 
 // Configure AWS SNS
@@ -17,61 +14,53 @@ const allowedHeaders = [
   'x-forwarded-for', 'x-forwarded-proto', 'x-amzn-trace-id', 'x-forwarded-port'
 ];
 
-/**
- * Create a new user
- */
+// Create a new user
 export const createUser = async (req, res) => {
-  logger.info('Received request to create user.');
+  logger.info('Incoming headers:', req.headers);
+
+  const hasUnexpectedHeaders = Object.keys(req.headers).some(
+    (header) => !allowedHeaders.includes(header.toLowerCase()) && !header.toLowerCase().startsWith('x-')
+  );
+
+  if (hasUnexpectedHeaders) {
+    logger.warn("Unexpected headers found in request.");
+    return res.status(400).json({ message: "Unexpected headers in request" });
+  }
+
   try {
-    // Validate request headers
-    const hasUnexpectedHeaders = Object.keys(req.headers).some(
-      (header) => !allowedHeaders.includes(header.toLowerCase()) && !header.toLowerCase().startsWith('x-')
-    );
-    if (hasUnexpectedHeaders) {
-      logger.warn('Request contains unexpected headers.');
-      return res.status(400).json({ message: 'Unexpected headers in the request.' });
+    const { email, password, first_name, last_name } = req.body;
+
+    if (!password || password.trim() === "") {
+      logger.warn("Password cannot be empty.");
+      return res.status(400).json({ message: "Password cannot be empty" });
     }
 
-    const { first_name, last_name, email, password } = req.body;
-    if (!first_name || !last_name || !email || !password) {
-      logger.warn('Missing required fields in request body.');
-      return res.status(400).json({ error: 'All fields are required.' });
-    }
-
-    // Check if the email is already in use
+    logger.info(`Checking existence for email: ${email}`);
     const existingUser = await getUserByEmail(email);
     if (existingUser) {
-      logger.warn(`Email already in use: ${email}`);
-      return res.status(400).json({ error: 'Email already in use.' });
+      logger.warn(`User already exists with email: ${email}`);
+      return res.status(400).send({ message: "The user already exists" });
     }
 
-    // Create the user
     const newUser = await createUserService(req.body);
     logger.info(`User created successfully with email: ${email}`);
 
-    // Generate verification token and expiry
-    const token = crypto.randomBytes(16).toString('hex');
-    console.log('Generated Token:', token);
-    const expiryTime = new Date(Date.now() + 2 * 60 * 1000); // Token expires in 2 minutes
 
-    // Debugging log for generated token
-    logger.debug(`Generated token: ${token} for email: ${email}`);
+    // Skip SNS logic in test environment
+    if (process.env.APP_ENV === 'test') {
+      logger.info('Test environment detected. Skipping SNS verification.');
+      return res.status(201).json(newUser); // Return response directly in test environment
+    }
 
-
-    // Save the token in the EmailTracking table
-    await EmailTracking.create({ email, token, expiryTime });
-    logger.info(`Verification token generated and saved for user: ${email}`);
-
+    // // Skip SNS logic in test environment
+    // if (process.env.APP_ENV !== 'test') {
     // Publish the verification message to SNS
-    const message = JSON.stringify({ email, token });
+    const message = JSON.stringify({ email });
     const params = {
       Message: message,
       TopicArn: process.env.SNS_TOPIC_ARN,
     };
 
-    // Detailed log for SNS publish parameters
-    logger.debug('SNS publish parameters:', params);
-    
     try {
       await snsClient.send(new PublishCommand(params));
       logger.info(`Verification token published to SNS successfully for email: ${email}`);
@@ -87,9 +76,7 @@ export const createUser = async (req, res) => {
   }
 };
 
-/**
- * Get user information
- */
+// Get user information
 export const getUserInfo = async (req, res) => {
   logger.info('Received request to fetch user information.');
   try {
@@ -106,15 +93,12 @@ export const getUserInfo = async (req, res) => {
   }
 };
 
-/**
- * Update user information
- */
+// Update user information
 export const updateUser = async (req, res) => {
   logger.info('Received request to update user information.');
   try {
     const { first_name, last_name, password } = req.body;
 
-    // Validate allowed fields
     const allowedFields = ['first_name', 'last_name', 'password'];
     const invalidFields = Object.keys(req.body).filter((field) => !allowedFields.includes(field));
 
@@ -123,7 +107,6 @@ export const updateUser = async (req, res) => {
       return res.status(400).json({ error: `Cannot update fields: ${invalidFields.join(', ')}` });
     }
 
-    // Update the user
     const updatedUser = await updateUserService(req.user.email, { first_name, last_name, password });
     if (!updatedUser) {
       logger.warn(`User not found for email: ${req.user.email}`);

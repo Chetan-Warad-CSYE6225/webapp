@@ -12,7 +12,7 @@ userRoutes.put('/v1/user/self', authenticateBasicAuth, blockUnverifiedUsers, upd
 
 
 
-// userRoutes.get('/verify', verifyUser);
+userRoutes.get('/verify', verifyUser);
 
 
 export default userRoutes;
