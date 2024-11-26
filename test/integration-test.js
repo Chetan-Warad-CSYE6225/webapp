@@ -15,7 +15,7 @@ describe('User API', function () {
   it('Test 1 - Create an account, and using the GET call, validate account exists', async function () {
     try {
       const userData = {
-        email: 'testuser112@example.com',
+        email: 'testuser1123@example.com',
         password: 'Password123@',
         first_name: 'John',
         last_name: 'Doe',
@@ -56,7 +56,7 @@ describe('User API', function () {
   it('Test 2 - Update the account and using the GET call, validate the account was updated', async function () {
     try {
       const userData = {
-        email: 'testuser112@example.com',
+        email: 'testuser1123@example.com',
         password: 'Password123@',
         first_name: 'John',
         last_name: 'Doe',
