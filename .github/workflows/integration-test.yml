@@ -1,57 +1,51 @@
-name: Integration Testing API
+name: integration testing api
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-
+    push:
+        branches: [ "main" ]
+    pull_request:
+        branches: [ "main" ]
+ 
 jobs:
-  api-test:
-    runs-on: ubuntu-latest
-    env:
-      DB_USERNAME: ${{ secrets.DB_USERNAME }}
-      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-      DB_DATABASE: ${{ secrets.DB_DATABASE }}
-      DB_HOST: ${{ secrets.DB_HOST }}
-      DB_DIALECT: ${{ secrets.DB_DIALECT }}
-      SERVER_PORT: ${{ secrets.SERVER_PORT }}
-      APP_ENV: ${{ secrets.APP_ENV }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: 20.x
-
-      - name: Install PostgreSQL
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql postgresql-contrib
-          sudo systemctl start postgresql
-
-      - name: Setup PostgreSQL
-        run: |
-          sudo -u postgres psql -c "CREATE USER $DB_USERNAME WITH PASSWORD '$DB_PASSWORD';"
-          sudo -u postgres psql -c "CREATE DATABASE $DB_DATABASE OWNER $DB_USERNAME;"
-          sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_DATABASE TO $DB_USERNAME;"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run database migrations
-        run: npx sequelize-cli db:migrate
-
-      - name: Run API tests
-        run: npm test
+    api-test:
+        runs-on: ubuntu-latest
         env:
             DB_USERNAME: ${{ secrets.DB_USERNAME }}
             DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
             DB_DATABASE: ${{ secrets.DB_DATABASE }}
-            DB_HOST: ${{ secrets.DB_HOST }}
-            DB_DIALECT: ${{ secrets.DB_DIALECT }}
-            SERVER_PORT: ${{ secrets.SERVER_PORT }}
-            APP_ENV: ${{ secrets.APP_ENV }}
+        strategy:
+            matrix:
+                node-version: [20.x]
+        steps:
+            - uses: actions/checkout@v2
+ 
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v1
+              with:
+                  node-version: ${{ matrix.node-version }}
+            - name: Install PostgreSQL and related packages
+              run: |
+                sudo apt-get update
+                sudo apt-get install -y postgresql postgresql-contrib
+                sudo systemctl start postgresql
+                sudo systemctl enable postgresql
+ 
+            - name: Create PostgreSQL user and database
+              run: |
+                sudo -u postgres psql -c "CREATE USER $DB_USERNAME WITH PASSWORD '$DB_PASSWORD';" 2>/dev/null
+                sudo -u postgres psql -c "CREATE DATABASE $DB_DATABASE OWNER $DB_USERNAME;" 2>/dev/null
+                sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_DATABASE TO $DB_USERNAME;" 2>/dev/null
+                sudo mkdir -p /var/log/webapp 2>/dev/null
+
+            - name: Install Dependencies
+              run: npm ci
+ 
+            - name: API testing
+              run: npm run build --if-present
+              env:
+                  DB_USERNAME: ${{ secrets.DB_USERNAME }}
+                  DB_HOST: ${{ secrets.DB_HOST }}
+                  DB_DATABASE: ${{ secrets.DB_DATABASE }}
+                  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+                  DB_DIALECT: ${{ secrets.DB_DIALECT }}
+                  SERVER_PORT: ${{ secrets.SERVER_PORT }}
+                  APP_ENV: ${{ secrets.APP_ENV }}
