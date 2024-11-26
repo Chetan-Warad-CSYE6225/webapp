@@ -2,8 +2,8 @@ import { getEmailTrackingByToken, setVerification } from '../services/emailTrack
 import logger from '../utils/logger.js';
  
 export const verifyUser = async (req, res) => {
-  const { user, token } = req.query; // Extract userId and token from the query params
-  logger.debug(`Request received with user: ${user}, token: ${token}`);
+  const { token } = req.query; // Extract userId and token from the query params
+  logger.debug(`Request received with  token: ${token}`);
  
   try {
     // Step 1: Fetch the email tracking record

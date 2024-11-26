@@ -1,7 +1,7 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../db/sequelize.js'; // Ensure the correct Sequelize instance is imported
 
-const EmailTracking = sequelize.define('EmailTrackings', {
+const EmailTracking = sequelize.define('EmailTracking', {
   email: {
     type: DataTypes.STRING,
     allowNull: false,

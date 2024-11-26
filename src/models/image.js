@@ -1,7 +1,7 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../db/sequelize.js';
 
-const Image = sequelize.define('Images', {
+const Image = sequelize.define('Image', {
   id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
