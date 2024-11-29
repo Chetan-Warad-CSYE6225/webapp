@@ -163,68 +163,60 @@ jobs:
           --output text)
         echo "Launch Template ID: $launch_template_id"
  
-        # Get the latest AMI ID
         latest_ami=$(aws ec2 describe-images \
-          --executable-users self \
-          --filters "Name=state,Values=available" "Name=architecture,Values=x86_64" "Name=root-device-type,Values=ebs" \
-          --query "reverse(sort_by(Images, &CreationDate))[0].ImageId" --output text)
+          --owners self \
+          --filters "Name=state,Values=available" \
+          --query "reverse(sort_by(Images, &CreationDate))[0].ImageId" \
+          --output text)
         echo "Latest AMI ID: $latest_ami"
- 
-        # Get the current latest launch template version
+
+        if [ -z "$latest_ami" ] || [ "$latest_ami" == "None" ]; then
+          echo "No valid AMI found. Exiting."
+          exit 1
+        fi
+
         latest_version=$(aws ec2 describe-launch-template-versions \
           --launch-template-id $launch_template_id \
-          --query 'LaunchTemplateVersions[-1].VersionNumber' --output text)
+          --query 'LaunchTemplateVersions[-1].VersionNumber' \
+          --output text)
         echo "Current Latest Launch Template Version: $latest_version"
- 
-        # Create a new launch template version with the latest AMI
+
         aws ec2 create-launch-template-version \
           --launch-template-id $launch_template_id \
           --source-version $latest_version \
           --launch-template-data '{"ImageId":"'"$latest_ami"'"}'
- 
-        # Get the new latest version number directly
+
         new_version=$(aws ec2 describe-launch-templates \
           --launch-template-ids $launch_template_id \
           --query 'LaunchTemplates[0].LatestVersionNumber' --output text)
         echo "New Launch Template Version: $new_version"
- 
-        # Explicitly set the new version as the default
+
         aws ec2 modify-launch-template \
           --launch-template-id $launch_template_id \
           --default-version $new_version
         echo "Updated default launch template version to: $new_version"
- 
-        # Update the Auto Scaling Group to use the new version
-        aws autoscaling update-auto-scaling-group \
-          --auto-scaling-group-name $asg_name \
-          --launch-template "LaunchTemplateId=$launch_template_id,Version=$new_version"
-        echo "Updated Auto Scaling Group with Launch Template Version: $new_version"
- 
- 
- 
-        
+
+    # Step 13: Refresh Auto Scaling Group
     - name: Refresh Auto Scaling Group
       run: |
         asg_name=$(aws autoscaling describe-auto-scaling-groups \
           --query "AutoScalingGroups | sort_by(@, &AutoScalingGroupARN)[-1].AutoScalingGroupName" \
           --output text)
         echo "Latest Auto Scaling Group Name: $asg_name"
-        
-        # Start instance refresh for the Auto Scaling Group
+
         refresh_id=$(aws autoscaling start-instance-refresh \
           --auto-scaling-group-name $asg_name \
           --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 50}' \
           --query 'InstanceRefreshId' --output text)
         echo "Instance Refresh ID: $refresh_id"
- 
-        # Monitor the instance refresh status
+
         while true; do
           refresh_status=$(aws autoscaling describe-instance-refreshes \
             --auto-scaling-group-name $asg_name \
             --query "InstanceRefreshes[?InstanceRefreshId=='$refresh_id'].Status" \
             --output text)
           echo "Instance Refresh Status: $refresh_status"
- 
+
           if [ "$refresh_status" == "Successful" ]; then
             echo "Instance refresh completed successfully."
             break
@@ -239,4 +231,3 @@ jobs:
             sleep 30
           fi
         done
- 
