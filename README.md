@@ -5,7 +5,7 @@
 This is a Node.js web application that utilizes Express, PostgreSQL, and Sequelize to provide a robust server environment. The application is configured with environment variables using `dotenv`.
 
 
-## Installation and Running the Application 
+## Installation and Running the Application test
 
 1. Clone the repository :
 
