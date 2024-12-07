@@ -58,6 +58,31 @@ app.all("/healthz", async (req, res) => {
     }
 });
 
+// Health check route
+app.all("/cicd", async (req, res) => {
+    try {
+        if (req.method !== 'GET') {
+            setResponseHeaders(res);
+            logger.warn(`Health check failed: Method ${req.method} not allowed`);
+            return res.status(405).send();
+        }
+
+        if (Object.keys(req.body).length > 0 || Object.keys(req.query).length > 0) {
+            setResponseHeaders(res);
+            logger.warn("Health check failed: Payload should be empty");
+            return res.status(400).send();
+        }
+
+        setResponseHeaders(res);
+        logger.info("Health check successful");
+        res.status(200).send();
+    } catch (error) {
+        setResponseHeaders(res);
+        logger.error(`Health check error: ${error.message}`);
+        res.status(503).send();
+    }
+});
+
 // User-related routes
 app.use('/', userRoutes);
 
