@@ -1,16 +1,31 @@
-# Webapp
+# CLOUD NATIVE WEB APPLICATION
 
 ## Description
+A robust User Management Service built with Node.js and Express.js, enabling CRUD operations and email verification during user registration. Deployed on AWS, the infrastructure is provisioned using Terraform for scalability and efficiency.
 
-This is a Node.js web application that utilizes Express, PostgreSQL, and Sequelize to provide a robust server environment. The application is configured with environment variables using `dotenv`.
+Features
+
+User Management: Comprehensive CRUD operations for managing user data.
+
+Health Monitoring: A dedicated endpoint to track application health and connected service status.
+
+Secure Deployment: Implements HTTPS with SSL certificates and customer-managed encryption keys to ensure data security.
+
+Scalability and Reliability: Utilizes managed instance groups and load balancers for high availability and scalability.
+
+Event-Driven Architecture: Sends verification emails through SendGrid by leveraging AWS SNS and Lambda Functions.
+
+## Architecture Diagram
+![Architecture Diagram](assets/Cloud6225.jpeg)
 
 
-## Installation and Running the Application test 2
+
+## Installation and Running the Application 
 
 1. Clone the repository :
 
    ```bash
-   git clone https://github.com/chetanpw98/Chetan-warad-webapp-forked.git test
+   git clone https://github.com/chetan1398/Cloud-Native-Web-Application-.git
    
 
 2. Install the dependencies:
@@ -20,13 +35,6 @@ This is a Node.js web application that utilizes Express, PostgreSQL, and Sequeli
 3. Run the application
    ```bash
    node app.js
-
-4. To start and stop to the Postgres Server
-   ```bash
-   net start postgresql-x64-16
-
-   
-   net stop postgresql-x64-16
 
 5. To run the Integration tests
    ```bash
@@ -78,8 +86,8 @@ This is a Node.js web application that utilizes Express, PostgreSQL, and Sequeli
 
    Status: 204 No Content
 
-Responses for GET/healthz:
-```bash
+   Responses for GET/healthz:
+   ```bash
    Status: 200 OK if it is healthy and no payload
    Status: 400 Bad Request
    Status: 503 if unhealthy
@@ -91,7 +99,7 @@ Responses for GET/healthz:
 
 
 7. To test the API request
-
+   ```bash
    API Response Examples: 
 
    200 OK
@@ -104,11 +112,63 @@ Responses for GET/healthz:
 
    503 Service Unavailable when disconnected to the database.
 
-   curl.exe -vvvv http://localhost:8080/healthz  
+   curl.exe -vvvv http://localhost:8080/healthz
+
+
+## TERRAFORM AWS INFRA 
+
+This project sets up and manages AWS infrastructure using **Terraform**. The configuration files provided define the resources and variables needed to create and manage an environment in AWS.
+
+## Setup Instructions
+
+1. Initialize the Terraform project:
+
+    ```bash
+    terraform init
+
+2. Format Terraform files
+    ```bash
+    terraform fmt
+
+3. Validate the Terraform configuration
+
+    ```bash
+    terraform validate
+
+4. Plan the infrastructure changes
+    ```bash
+    terraform plan
+
+
+5. Apply the Terraform configuration
+    ```bash
+    terraform apply
+
+6. Destroy the infrastructure
+    ```bash
+    terraform destroy
+
+
+7. Import Certificate
+    ```bash
+    aws acm import-certificate ^
+        --certificate fileb://C:\Users\cheta\Desktop\Downloads\demo_chetanwarad.me\demo_chetanwarad_me.crt ^
+        --private-key fileb://C:\Users\cheta\Desktop\Downloads\demo_chetanwarad.me\privatekey.pem ^
+        --certificate-chain fileb://C:\Users\cheta\Desktop\Downloads\demo_chetanwarad.me\demo_chetanwarad_me.ca-bundle ^
+        --region us-east-1 ^
+        --profile demo
+
+8. List the certificate
+    ```bash
+    aws acm list-certificates --region us-east-1 --profile demo
+    
 
 
 
 
-   Developer: Chetan Warad
-   NUID: 002817179
-   Email: warad.c@northeastern.edu
+
+Developer: Chetan Warad
+
+NUID: 002817179
+
+Email: warad.c@northeastern.edu
