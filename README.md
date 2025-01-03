@@ -16,7 +16,7 @@ Scalability and Reliability: Utilizes managed instance groups and load balancers
 Event-Driven Architecture: Sends verification emails through SendGrid by leveraging AWS SNS and Lambda Functions.
 
 ## Architecture Diagram
-![Architecture Diagram](assets/Cloud6225.jpeg)
+![Architecture Diagram](csye6225.jpeg)
 
 
 
